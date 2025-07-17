@@ -29,7 +29,6 @@ public class VehicleServices : IVehicleServices
         {
             query = query.Skip(((int)page - 1) * itemsPerPage).Take(itemsPerPage);
         }
-        
 
         return query.ToList();
     }

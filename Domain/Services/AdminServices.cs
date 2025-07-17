@@ -18,4 +18,30 @@ public class AdminServices : IAdminServices
 
         return result;
     }
+    public Admin Post(Admin admin)
+    {
+        _dbContext.Admins.Add(admin);
+
+        _dbContext.SaveChanges();
+
+        return admin;
+    }
+    public List<Admin> GetAll(int? page)
+    {
+        var query = _dbContext.Admins.AsQueryable();
+
+        int itemsPerPage = 10;
+
+        if (page != null)
+        {
+            query = query.Skip(((int)page - 1) * itemsPerPage).Take(itemsPerPage);
+        }
+
+        return query.ToList();
+    }
+
+    public Admin? GetId(int id)
+    {
+        return _dbContext.Admins.Where(a => a.Id == id).FirstOrDefault();
+    }
 }

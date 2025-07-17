@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MinimalApi.Domain.Entities;
+using MinimalApi.Domain.Enums;
 using MinimalApi.Domain.Interfaces;
 using MinimalApi.Domain.ModelViews;
 using MinimalApi.Domain.Services;
@@ -21,10 +22,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 var app = builder.Build();
-
+#region Home
 app.MapGet("/", () => Results.Json(new Home())).WithTags("Home");
+#endregion
 
-app.MapPost("/login", ([FromBody] LoginDTO loginDTO, IAdminServices adminServices) =>
+#region Admin
+app.MapPost("/admins/login", ([FromBody] LoginDTO loginDTO, IAdminServices adminServices) =>
 {
     if (adminServices.Login(loginDTO) != null)
     {
@@ -36,6 +39,78 @@ app.MapPost("/login", ([FromBody] LoginDTO loginDTO, IAdminServices adminService
     }
 }).WithTags("Admins");
 
+app.MapGet("/admins", ([FromQuery] int? page, IAdminServices adminServices) =>
+{
+    var adms = new List<AdminModelView>();
+    var admins = adminServices.GetAll(page);
+
+    foreach (var adm in admins)
+    {
+        adms.Add(new AdminModelView
+        {
+            Id = adm.Id,
+            Email = adm.Email,
+            Perfil = adm.Perfil
+        });
+    }
+
+    return Results.Ok(adms);
+}).WithTags("Admins");
+
+app.MapGet("/admins/{id}", ([FromRoute] int id, IAdminServices adminServices) =>
+{
+    var admin = adminServices.GetId(id);
+
+    if (admin == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new AdminModelView
+        {
+            Id = admin.Id,
+            Email = admin.Email,
+            Perfil = admin.Perfil
+        });
+}).WithTags("Admins");
+
+app.MapPost("/admins", ([FromBody] AdminDTO adminDTO, IAdminServices adminServices) =>
+{
+    var validation = new ErrorValidation
+    {
+        Messages = new List<string>()
+    };
+
+    if (string.IsNullOrEmpty(adminDTO.Email) || string.IsNullOrEmpty(adminDTO.Senha) || adminDTO.Perfil == null)
+    {
+        validation.Messages.Add("O campo não pode ser vazio!");
+    }
+
+    if (validation.Messages.Count > 0)
+    {
+        return Results.BadRequest(validation);
+    }
+
+    var admin = new Admin
+    {
+        Email = adminDTO.Email,
+        Senha = adminDTO.Senha,
+        Perfil = adminDTO.Perfil.ToString() ?? Perfil.Editor.ToString()
+    };
+
+    adminServices.Post(admin);
+
+    return Results.Created($"/admin/{admin.Id}", new AdminModelView
+        {
+            Id = admin.Id,
+            Email = admin.Email,
+            Perfil = admin.Perfil
+        });
+}).WithTags("Admins");
+
+#endregion
+
+#region Validation
 ErrorValidation validationDTO(VehicleDTO vehicleDTO)
 {
     var validation = new ErrorValidation
@@ -54,7 +129,9 @@ ErrorValidation validationDTO(VehicleDTO vehicleDTO)
 
     return validation;
 }
+#endregion
 
+#region Vehicles
 app.MapPost("/vehicles", ([FromBody] VehicleDTO vehicleDTO, IVehicleServices vehicleServices) =>
 {
     var validation = validationDTO(vehicleDTO);
@@ -134,6 +211,7 @@ app.MapDelete("/vehicles/{id}", ([FromRoute] int id, IVehicleServices vehicleSer
 
     return Results.NoContent();
 }).WithTags("Vehicles");
+#endregion
 
 app.UseSwagger();
 app.UseSwaggerUI();
