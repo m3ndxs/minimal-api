@@ -14,7 +14,7 @@ public class VehicleServices : IVehicleServices
         _dbContext = dbContext;
     }
 
-    public List<Vehicle> GetAll(int page = 1, string? name = null, string? brand = null)
+    public List<Vehicle> GetAll(int? page = 1, string? name = null, string? brand = null)
     {
         var query = _dbContext.Vehicles.AsQueryable();
 
@@ -25,7 +25,11 @@ public class VehicleServices : IVehicleServices
 
         int itemsPerPage = 10;
 
-        query = query.Skip((page - 1) * itemsPerPage).Take(itemsPerPage);
+        if (page != null)
+        {
+            query = query.Skip(((int)page - 1) * itemsPerPage).Take(itemsPerPage);
+        }
+        
 
         return query.ToList();
     }

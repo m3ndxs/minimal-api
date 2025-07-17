@@ -22,7 +22,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
-app.MapGet("/", () => Results.Json(new Home()));
+app.MapGet("/", () => Results.Json(new Home())).WithTags("Home");
 
 app.MapPost("/login", ([FromBody] LoginDTO loginDTO, IAdminServices adminServices) =>
 {
@@ -34,7 +34,7 @@ app.MapPost("/login", ([FromBody] LoginDTO loginDTO, IAdminServices adminService
     {
         return Results.Unauthorized();
     }
-});
+}).WithTags("Admins");
 
 app.MapPost("/vehicles", ([FromBody] VehicleDTO vehicleDTO, IVehicleServices vehicleServices) =>
 {
@@ -48,7 +48,58 @@ app.MapPost("/vehicles", ([FromBody] VehicleDTO vehicleDTO, IVehicleServices veh
     vehicleServices.Post(vehicle);
 
     return Results.Created($"/vehicle/{vehicle.Id}", vehicle);
-});
+}).WithTags("Vehicles");
+
+app.MapGet("/vehicles", ([FromQuery] int? page, IVehicleServices vehicleServices) =>
+{
+    var vehicle = vehicleServices.GetAll(page);
+
+    return Results.Ok(vehicle);
+}).WithTags("Vehicles");
+
+app.MapGet("/vehicles/{id}", ([FromRoute] int id, IVehicleServices vehicleServices) =>
+{
+    var vehicle = vehicleServices.GetId(id);
+
+    if (vehicle == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(vehicle);
+}).WithTags("Vehicles");
+
+app.MapPut("/vehicles/{id}", ([FromRoute] int id, VehicleDTO vehicleDTO, IVehicleServices vehicleServices) =>
+{
+    var vehicle = vehicleServices.GetId(id);
+
+    if (vehicle == null)
+    {
+        return Results.NotFound();
+    }
+
+    vehicle.Name = vehicleDTO.Name;
+    vehicle.Brand = vehicleDTO.Brand;
+    vehicle.Year = vehicleDTO.Year;
+
+    vehicleServices.Put(vehicle);
+
+    return Results.Ok(vehicle);
+}).WithTags("Vehicles");
+
+app.MapDelete("/vehicles/{id}", ([FromRoute] int id, IVehicleServices vehicleServices) =>
+{
+    var vehicle = vehicleServices.GetId(id);
+
+    if (vehicle == null)
+    {
+        return Results.NotFound();
+    }
+
+    vehicleServices.Delete(vehicle);
+
+    return Results.NoContent();
+}).WithTags("Vehicles");
 
 app.UseSwagger();
 app.UseSwaggerUI();
